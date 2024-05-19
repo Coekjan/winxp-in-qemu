@@ -1,0 +1,32 @@
+#!/bin/bash
+
+set -eux
+
+QEMU=qemu-system-x86_64
+QEMU_OPTS=""
+QEMU_CDROM_DEV=${QEMU_CDROM_DEV:-/dev/cdrom}
+
+if [[ $(uname -m) = 'x86_64' ]]; then
+	QEMU_OPTS+=" -accel kvm"
+fi
+
+if $QEMU -display \? | grep -q 'gtk'; then
+	QEMU_OPTS+=" -display gtk"
+else
+	QEMU_OPTS+=" -vnc ${QEMU_VNC:-:0}"
+fi
+
+if [[ -e $QEMU_CDROM_DEV ]]; then
+	PRIV=y
+	QEMU_OPTS+=" -cdrom $QEMU_CDROM_DEV"
+fi
+
+QEMU_OPTS+=" -monitor stdio"
+QEMU_OPTS+=" -smp ${QEMU_SMP:-4}"
+QEMU_OPTS+=" -m ${QEMU_MEM:-4G}"
+QEMU_OPTS+=" -drive file=${QEMU_DISK:-winxp-zh_cn.qcow2},index=0,media=disk,format=qcow2"
+QEMU_OPTS+=" -netdev user,id=n0 -device rtl8139,netdev=n0"
+
+[[ "${PRIV:-n}" = 'y' ]] && QEMU="sudo $QEMU"
+
+exec $QEMU $QEMU_OPTS
